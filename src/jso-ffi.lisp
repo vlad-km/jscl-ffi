@@ -397,24 +397,48 @@
              ,@(jscl::%lmapcar (lambda (it) (%set-props `,owns `,it)) `,props) )))
 
 
+;;; Short form 
 
+;;; create js object
+;;; ({}) -  empty object {}
+;;; ({mk} "a" 1 "b" 2 "c" ({n} "d" (1 2 3))) - with pairs {n: v, ... nN: vN}
+;;;
 #+kass (defmacro {} (&rest n) `(jscl::new))
-#+kass (defmacro {n} (&rest p) `(jso:make-obj ,@p))
-#+kass (defmacro {l} (o) `(jso:to-list ,o))
-#+kass (defmacro {i} (o f) `(jso:iter ,o ,f))
-#+kass (defmacro {f} (o (&rest n) &rest a) `(funcall ({g} ,o ,@n) ,@a))
+#+kass (defmacro {mk} (&rest e) `(jso:make-obj ,@e))
+
+;;; simple manipulation from JS object
+;;;
+;;; ({g}) - get object property by name => ({g} obj "a")
+;;; ({s}) - set object property. if the name does not exist, the property
+;;;         will be added to object. => ({s} obj ("c" "f") (lambda (&rest any) nil))
+;;; ({f}) - call object method => ({f} (obk ("c" "f")) 1 2 3)
 #+kass (defmacro {g} (&rest n) (if (null `,n) nil) `(jscl::oget ,(car n) ,@(cdr n)))
 #+kass (defmacro {s} ((r &rest n) &rest a) `(setf (jscl::oget ,r ,@n) ,@a))
+#+kass (defmacro {f} ((obj &rest methods) &body args) `((jscl::oget ,obj ,@methods) ,@args))
+
+
+;;;
+;;; ({l}) - returns an list with all properties pair (("a" 1) ("b" 2))
+;;; ({i}) - ??? todo: delete from pkg
+;;; ({k}) - returns an array of a given object's own enumerable property names,
+;;;         iterated in the same order that a normal loop would.
+;;;         this macro is mainly for code reduction.
+;;;         array elements must be converted to Lisp form by a jscl::js-to-lisp function
+;;;         or ({JL}) macros.
+#+kass (defmacro {l} (o) `(jso:to-list ,o))
+#+kass (defmacro {i} (o h) `(jso:iter ,o ,h))
+#+kass (defmacro {k} (o) `(#j:Object:keys ,o))
+
+
+;;; conversion functions
+;;; {JL} from JS to LISP
+;;; {LJ} from LISP to JS
+;;; {VL} from Array to LIST
+;;; {LV} from LIST to Array
 #+kass (defmacro {JL} (o) `(jscl::js-to-lisp ,o))
 #+kass (defmacro {LJ} (o) `(jscl::lisp-to-js ,o))
 #+kass (defmacro {VL} (o) `(jscl::%lmapcar #'jscl::js-to-lisp (jscl::vector-to-list ,o)))
 #+kass (defmacro {LV} (o) `(jscl::list-to-vector (jscl::%lmpacar #'jscl::lisp-to-js  ,o)))
-#+kass (defmacro {mk} (&rest e) `(jso:make-obj ,@e))
-#+kass (defmacro {k} (o) `(#j:Object:keys ,o))
-#+kass (defmacro {i} (o f) `(jso:iter ,o ,f))
-
-#+todo
-(defmacro {f} ((obj &rest methods) &body args) `((jscl::oget ,obj ,@methods) ,@args))
 
 #+todo
 (intern "|null|" :keyword)
