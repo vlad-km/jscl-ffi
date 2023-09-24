@@ -9,7 +9,7 @@
             /     \                   2017, Original https://github.com/vlad-km/moren-electron
             )     (                   2023, Code redesign
            /       \                  Electron >= electron@21.2.2
-           \       /                  JSCL > version 0.8.2  
+           \       /                  JSCL Moren edition 
       jgs   \__ __/
                ))
               //
