@@ -9,7 +9,7 @@
             /     \                   
             )     (                   Copyright © 2018,2023  @vlad-km
            /       \                  Redesign for Electron >= electron@21.2.2
-           \       /                               JSCL >= version 0.8.2  
+           \       /                               JSCL Moren edition 
       jgs   \__ __/
                ))
               //
