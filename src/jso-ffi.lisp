@@ -48,10 +48,10 @@
 
 ;;; Some short aliase's for internal coerced functions from  utils.lisp
 (export '(ffi::list->[] ffi::[]->list ffi::js->cl ffi::cl->js))
-(jscl::fset 'list->[] (jscl::fdefinition #'jscl::list-to-vector))
-(jscl::fset '[]->list (jscl::fdefinition #'jscl::vector-to-list))
-(jscl::fset 'js->cl (jscl::fdefinition #'jscl::js-to-lisp))
-(jscl::fset 'cl->js (jscl::fdefinition #'jscl::lisp-to-js))
+(jscl::fset 'list->[] (fdefinition #'jscl::list-to-vector))
+(jscl::fset '[]->list (fdefinition #'jscl::vector-to-list))
+(jscl::fset 'js->cl (fdefinition #'jscl::js-to-lisp))
+(jscl::fset 'cl->js (fdefinition #'jscl::lisp-to-js))
 
 
 
@@ -308,10 +308,30 @@
   (#j:RegExp pattern flag))
 
 
+#|
+
+(setq e (regexp "t(e)(st(\\d?))" "g"))
+>> #<JS-OBJECT /t(e)(st(\d?))/g>
+
+(#j:Array:from (|String| "test1test2" "matchAll" e))
+>> #(#(#<JS-OBJECT test1> #\e #<JS-OBJECT st1> #\1) #(#<JS-OBJECT test2> #\e #<JS-OBJECT st2> #\2))
+
+(#j:Array:from (|String| "test1test2" "matchAll" (regexp "t(e)(st(\\d?))" "g")))
+>> #(#(#<JS-OBJECT test1> #\e #<JS-OBJECT st1> #\1) #(#<JS-OBJECT test2> #\e #<JS-OBJECT st2> #\2))
+
+(map 'list (lambda (x)
+             (list (ffi:js->cl (first x))
+                   (ffi:js->cl (second x))
+                   (ffi:js->cl (third x))
+                   (fourth x  )))
+     (map 'list #'ffi:[]->list
+          (#j:Array:from (ffi:|String| "test1test2" "matchAll" e))))
+|#
+
 ;;; WebAssemble
 (export '(jscl::web-assemble-memory))
-(defun web-assemble-memory (&key (initial 10) (maximum 100))
-  (let* ((template (jscl::concat "{initial: " initial ", maximum: " maximum "}" ))
+(defun web-assemble-memory (&key (initial 10) (maximum 100) (shared nil))
+  (let* ((template (jscl::concat "{initial: " initial ", maximum: " maximum (if shared " ,shared:true }" "}") ))
          (obj (%def-obj-template template)))
     (jscl::make-new #j:WebAssembly:Memory obj)))
 
@@ -324,6 +344,12 @@
 (export '(ffi::wam-grow))
 (defun wam-grow (mem &optional (pages 1))
   ((jscl::oget mem "grow") pages))
+
+#|
+(setq mem (ffi:web-assemble-memory :initial 1 :maximum 1 :shared t))
+(setq a32 (jscl::make-new #j:Int32Array (ffi:wam-buffer mem)))
+(#j:Atomics:add a32 0 1)
+|#
 
 ;;; WebAssembly:instantiateStreaming
 ;;; https://developer.mozilla.org/en-US/docs/WebAssembly/JavaScript_interface/instantiateStreaming
