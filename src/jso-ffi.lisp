@@ -10,7 +10,7 @@
             )     (                   2023, Code redesign
            /       \                  Electron >= electron@21.2.2
            \       /                  JSCL Moren edition 
-      jgs   \__ __/
+      jgs   \__ __/                   Node.js
                ))
               //
              ((
@@ -542,6 +542,8 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
   `((jscl::oget ,obj ,@methods "bind") ,obj ,@args))
 
 ;;; js object method call without binding
+;;; a<- {a:0, fn: (lambda (x) (ffi:setprop (jscl::this "a"))}
+;;; (ffi:call (a "fn"))
 (export '(ffi::call))
 (defmacro call ((obj &rest methods) &body args)
   `((jscl::oget ,obj ,@methods) ,@args))
@@ -573,7 +575,8 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
 ;;; details see at:
 ;;; https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty
 (export '(ffi::defprop))
-(defun defprop (object prop &key value get set writable enumerable configurable)
+
+(defun defprop (object prop &key value #+nil get #+nil set writable enumerable configurable)
     (let ((args)
           (prop-name
             (cond ((listp prop) (setq prop-name (jscl::%lmapcar '%nc prop)))
@@ -582,8 +585,8 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
         (if writable (push (list "writable" writable) args))
         (if enumerable (push (list "enumerable" enumerable) args))
         (if configurable (push (list "configuarble" configurable) args))
-        (if get (push (list "get" get) args))
-        (if set (push (list "set" set) args))
+        #+nil (if get (push (list "get" get) args))
+        #+nil (if set (push (list "set" set) args))
         (setq args (apply 'make-obj (apply 'append args)))
         (cond ((listp prop-name)
                (let ((arguments
@@ -615,7 +618,49 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
 (defmacro with-this (name &rest body)
     `(let ((,name jscl::this))
          ,@body))
+#|
+   Object inheritance (prototype)
 
+   (defvar stub-o (ffi:make-obj
+                 "name" nil
+                 :|weight| nil
+                 "setWeight" (lambda (x) (ffi:with-this self (ffi:setprop (self "weight") x)))
+                 "setName" (lambda (x) (ffi:with-this self (ffi:setprop (self "name") x)))))
+
+   ;;; constructor
+   (defun make-o1 (name weight)
+      (let ((o (ffi:new)))
+         (ffi:setprop (o "__proto__") stub-o)
+         (ffi:setprop (o "show")
+            (lambda ()
+              (ffi:with-this self
+                 (format t "~&1: Object ~a with weigth ~a~&"
+                    (ffi:getprop self "name")
+                    (ffi:getprop self "weight")))))
+         (ffi:defprop o "showOther" :enumerable nil
+              :value (lambda ()
+                       (ffi:with-this self
+                         (format t "~&2: Object ~a with weigth ~a~&"
+                                    (ffi:getprop self "name")
+                                    (ffi:getprop self "weight")))))
+         (ffi:call (o "setName") name)
+         (ffi:call (o "setWeight") weight)
+         (ffi:call (o "show"))
+         (ffi:call (o "showOther"))
+   o))
+
+   
+   (setq ro (make-o1 "aaa" 113))
+   =>
+   1: Object aaaa with weigth 113
+   2: Object aaaa with weigth 113
+   #<JS-OBJECT [object Object]>
+
+   (ffi:obj-list oo)
+   =>
+   (("show" #<FUNCTION>) ("name" "aaaa") ("weight" 113))
+
+|#
 
 
 
