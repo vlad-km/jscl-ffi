@@ -46,6 +46,15 @@
       nil
       t))
 
+;;; Some short aliase's for internal coerced functions from  utils.lisp
+(export '(ffi::list->[] ffi::[]->list ffi::js->cl ffi::cl->js))
+(jscl::fset 'list->[] (jscl::fdefinition #'jscl::list-to-vector))
+(jscl::fset '[]->list (jscl::fdefinition #'jscl::vector-to-list))
+(jscl::fset 'js->cl (jscl::fdefinition #'jscl::js-to-lisp))
+(jscl::fset 'cl->js (jscl::fdefinition #'jscl::lisp-to-js))
+
+
+
 ;;; true if obj eq js-null
 (export '(ffi::js-null-p))
 (defun js-null-p (obj) (%js-null-p obj))
@@ -149,7 +158,8 @@
 
 ;;; jscl::new
 (export '(ffi::new))
-(defmacro new (&rest ignore) `(jscl::new))
+(defun new (&rest ignore) (#j:Object))
+
 
 ;;; jscl::%js-vref
 ;;;    (ffi:ref "null")
@@ -161,16 +171,25 @@
 ;;;    (funcall (ffi:ref "Array") 1 2 3)
 ;;;    => #(1 2 3)
 (export '(ffi::ref))
+#+nil
 (defmacro ref (var)
       `(jscl::%js-vref ,var))
+(defun ref (name-string)
+      (jscl::%js-vref name-string))
+
 
 ;;; (winref "document")
 ;;;    => window.document
 ;;; (winref "screenX")
 ;;;    => nnn
 (export '(ffi::winref))
-(defmacro winref (var)
+#+nil
+(defmacro @winref (var)
   `(jscl::oget (jscl::%js-vref "window") ,var))
+
+(defun winref (name-string)
+  (jscl::oget (jscl::%js-vref "window") name-string))
+
 
 ;;; or (ffi:ref "null")
 ;;; like this:
@@ -283,7 +302,7 @@
 |#
 (export '(ffi::regexp))
 (defun regexp (pattern &optional (flag "" f-op))
-  (check-type pattern string "FFI:regexp expected STRING PATTERN, not this (~a)." pattern)
+  (check-type pattern string "FFI:regexp")
   (unless (%check-arg-string flag)
     (error "FFI:regexp expected STRING FLAG, not this (~a)." flag))
   (#j:RegExp pattern flag))
@@ -339,9 +358,11 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
 ;;; symbol := (%nc :a) => "A"
 ;;;           (%nc 'a) => "a"
 ;;;           (%nc '-a) => "A"
+;;;           (%nc '---a => "A"
 ;;;           (%nc 'a-a) => "aA"
 ;;; (%nc :|a-b|) => "aB"
-;;; (%nc "AbC" => "AbC")
+;;; (%nc :|a -b| => "a_B")
+;;; string:= (%nc "AbC" => "AbC")
 (defun %nc (name)
   (cond ((stringp name) (return-from %nc name))
         ((symbolp name) (setq name (string-downcase (symbol-name name))))
@@ -376,11 +397,11 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
      (return result)))
 
 ;;; make JS object without Object definitions
-;;; (%make-obj "a" 1 "b" 2 "c" (%make-obj "f" (lambda nil t)))
+;;; (make-obj "a" 1 "b" 2 "c" (make-obj "f" (lambda nil t)))
 ;;; => {a: 1, b:2, c: {f: <fn>}}
 (export '(ffi::make-obj))
 (defun make-obj (&rest kv)
-  (let ((obj (jscl::new))
+  (let ((obj (#j:Object))
         (idx 0)
         (key-val))
     (if (oddp (list-length kv))
@@ -437,11 +458,13 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
     nil))
 
 
-;;; Return object keys
-;;; => ("bbb" "aaa")
+;;; Return object keys, only enumerable props!!!
+;;; ie obj <- (ffi:new)
+;;;    (ffi:defprop obj "name" :value "Meister" :writable t) 
+;;;    (ffi:obj-keys obj) -> nil
+;;;
 (export '(ffi::obj-keys))
 (defun obj-keys (jso)
-  ;; only enumerable 
   (jscl::%lmapcar #'jscl::js-to-lisp (jscl::vector-to-list (#j:Object:keys jso))))
 
 (export '(ffi::get-own-prop-names))
@@ -494,6 +517,15 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
 (defun is-frozen (obj)
   (#j:Object:isFrozen obj))
 
+;;; Seals an object.
+(export '(ffi::seal))
+(defun seal (obj)
+  (#j:Object:seal obj))
+
+(export '(ffi::is-sealed))
+(defun is-sealed (obj)
+  (#j:Object:isSealed obj))
+
 ;;; determines if an object is extensible (whether it can have
 ;;; new properties added to it)
 (export '(ffi::is-extensible))
@@ -517,7 +549,7 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
 
 ;;; js object get/set macro
 
-;;; (jso:get-prop obj "aaa" "bbb" "ccc")
+;;; (ffi:getprop obj "aaa" "bbb" "ccc")
 ;;; => (jscl::oget obj "aaa" "bbb" "ccc")
 (export '(ffi::getprop))
 (defmacro getprop (obj &rest pathes)
@@ -525,16 +557,16 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
   ;; pathes - string | string*
   `(jscl::oget ,obj ,@pathes ))
 
-;;; (jso::set-prop (obj "aaa" ) (new))
+;;; (ffi::setprop (obj "aaa" ) (new))
 ;;;   => (setf (oget obj "aaa") (new))
-;;; (jso::set-prop (obj "aaa" "bbb") (new))
-;;; (jso::set-prop (obj "aaa" "bbb" "ccc") "place")
+;;; (ffi:setprop (obj "aaa" "bbb") (new))
+;;; (ffi::setprop (obj "aaa" "bbb" "ccc") "place")
 ;;;   obj => {aaa: {bbb: {ccc: "place"}}}
 (export '(ffi::setprop))
-(defmacro setprop ((obj &rest pathes) value)
+(defmacro setprop ((obj &rest pathes) &body value)
   ;; obj - js object
   ;; pathes - string | string*
-  `(setf (jscl::oget ,obj ,@pathes) ,value))
+  `(setf (jscl::oget ,obj ,@pathes) ,@value))
 
 
 ;;; define js object property
@@ -564,9 +596,9 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
 ;;; REPL =>
 ;;;   (setq obj (funcall (ffi:ref "Object")))
 ;;;   (ffi:defprop obj "name" :value "Meister" :writable t)
-;;;   (ffi:get-own-prop-descr obj)
+;;;   (ffi:get-prop-descr obj)
 ;;;   => #<JS-OBJECT [object Object]>
-;;;   (jso:to-list *)
+;;;   (ffi:to-list *)
 ;;;    => (("value" "Meister") ("writable" T) ("enumerable" NIL) ("configurable" NIL))
 ;;;
 (export '(ffi::get-prop-descr))
@@ -575,6 +607,19 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
   ;; prop-name - string | keyword | symbol
   (#j:Object:getOwnPropertyDescriptor object (%nc prop-name)))
 
+;;; JS THIS for lisp let form
+;;; (lambda (n)
+;;;  (ffi:with-this self
+;;;     (ffi:setprop (self "name") "Meister"))))
+(export '(ffi::with-this))
+(defmacro with-this (name &rest body)
+    `(let ((,name jscl::this))
+         ,@body))
+
+
+
+
+#|
 ;;; (:constructor (arg arg arg) &body)
 (defun %do-constructor-clause (tail)
     `(lambda (,@(car tail)) ,@(cdr tail)))
@@ -590,12 +635,10 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
     (values (car tail) (cdr tail)))
 
 
-;;;  JS THIS for lisp let form
-;;;
+;;; JS THIS for lisp let form
 ;;; (lambda (n)
-;;;  (with-this (self)
-;;;     (setf (jscl::oget self "name") n))))
-;;;
+;;;  (ffi:with-this self
+;;;     (ffi:setprop (self "name") "Meister"))))
 (export '(ffi::with-this))
 (defmacro with-this (name &rest body)
     `(let ((,name jscl::this))
@@ -612,7 +655,7 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
     (let ((name)
           (descr))
         (unless (setq name (car item))
-            (error "Prop name must be"))
+            (error "DEFOBJECT: Prop name must be"))
         (setq descr (cadr item))
         (if descr (push 'list descr))
         (if descr
@@ -637,10 +680,14 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
 ;;;    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty
 ;;;    (:constructor (name &optional (weight 0) (height 0))
 ;;;        (with-this (self)
-;;;            (set-prop (self "name") name)
-;;;            (set-prop (self "weight") weight)
-;;;            (set-prop (self "height") height)) ;;  Object.prototype.constructor
-;;;    (:method set-weight (s) (set-prop (jscl::this "weight") s))
+;;;            (setprop (self "name") name)
+;;;            (setprop (self "weight") weight)
+;;;            (setprop (self "height") height)) ;;  Object.prototype.constructor
+;;;    (:method set-weight (s) (setprop (jscl::this "weight") s))
+
+|#
+
+#|
 (export '(ffi::defobject))
 (defmacro defobject ((name &key inherit) &rest clauses)
     (let ((parent)
@@ -683,6 +730,7 @@ look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/i
              ,@(jscl::%lmapcar (lambda (item) (%set-proto-method `,owns `,item)) `,methods)
              ,@(jscl::%lmapcar (lambda (it) (%set-props `,owns `,it)) `,props) )))
 
+|#
 
 (push :ffi *features*)
 (in-package :cl-user)
