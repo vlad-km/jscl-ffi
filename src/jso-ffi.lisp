@@ -244,6 +244,8 @@
   `(let ((o (jscl::lisp-to-js ,s)))
      ((jscl::oget o ,m) ,@a)))
 
+;;; Array instance methods
+;;;
 ;;; ffi:|Array|
 ;;;    (setq *a (funcall (ffi:ref "Array") 1 2 3))
 ;;;    (ffi:|Array| *a "push" 4)
@@ -260,6 +262,15 @@
   ;; `method` must be a `string`
   `((jscl::oget ,obj ,method) ,@args))
 
+;;; Array static method
+;;; Creates a new Array instance from an iterable or array-like object
+;;;  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from#syntax
+;;;  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from#examples
+(export '(ffi::array-from))
+(defun Array-from (obj &optional (mapfn map-p nil) env)
+  (if map-p
+      (#j:Array:from obj mapfn)
+      (#j:Array:from obj)))
 
 ;;; ffi:|Math|
 ;;;  (ffi:|Math| "log" 2)
@@ -327,57 +338,6 @@
      (map 'list #'ffi:[]->list
           (#j:Array:from (ffi:|String| "test1test2" "matchAll" e))))
 |#
-
-;;; WebAssemble
-(export '(jscl::web-assemble-memory))
-(defun web-assemble-memory (&key (initial 10) (maximum 100) (shared nil))
-  (let* ((template (jscl::concat "{initial: " initial ", maximum: " maximum (if shared " ,shared:true }" "}") ))
-         (obj (%def-obj-template template)))
-    (jscl::make-new #j:WebAssembly:Memory obj)))
-
-;;; return ArrayBuffer object
-(export '(ffi::wam-buffer))
-(defun wam-buffer (mem)
-  (jscl::oget mem "buffer"))
-
-;;; Increases the size of the memory instance by a specified number of WebAssembly pages 
-(export '(ffi::wam-grow))
-(defun wam-grow (mem &optional (pages 1))
-  ((jscl::oget mem "grow") pages))
-
-#|
-(setq mem (ffi:web-assemble-memory :initial 1 :maximum 1 :shared t))
-(setq a32 (jscl::make-new #j:Int32Array (ffi:wam-buffer mem)))
-(#j:Atomics:add a32 0 1)
-|#
-
-;;; WebAssembly:instantiateStreaming
-;;; https://developer.mozilla.org/en-US/docs/WebAssembly/JavaScript_interface/instantiateStreaming
-;;; return
-;;; A Promise that resolves to a ResultObject which contains two fields:
-;;;   module: A WebAssembly.Module object representing the compiled WebAssembly module.
-;;;           This Module can be instantiated again or shared via postMessage().
-;;;   instance: A WebAssembly.Instance object that contains all the Exported WebAssembly functions.
-
-(defun wa-fetch (pathname &optional (import nil))
-  (if import
-   (#j:WebAssembly:instantiateStreaming (#j:fetch pathname) import)
-   (#j:WebAssembly:instantiateStreaming (#j:fetch pathname))))
-
-#|
-look at: https://github.com/mdn/webassembly-examples/blob/main/js-api-examples/instantiate-streaming.html
-
-(promise-then 
- (wa-fetch "./simple.wasm"
-           (%def-obj-template "{imports: { imported_func: arg => { console.log('aaa',arg);}}};"))
- (lambda (res)
-   ((jscl::oget res "instance" "exports" "exported_func")))
- (lambda (res)
-   (print (list :something-went-wrong res))
-   (terpri))
- )
-|#
-
 
 ;;; name convertor from symbol to string
 ;;;
