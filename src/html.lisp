@@ -120,7 +120,7 @@
 ;;;     "span"
 ;;;     "SPAN"
 ;;;     "SPAN"
-(export '(html:element-tag))
+(export '(html::element-tag))
 (defun element-tag (el)
   (values 
    (jscl::oget el "localName")
@@ -146,7 +146,7 @@
 
 ;;; element hidden
 ;;; getter / setter
-(export '(html:element-hidden))
+(export '(html::element-hidden))
 (defun element-hidden (el &optional (value nil val-p))
   (if val-p
       (setf (jscl::oget el "hidden") value)
