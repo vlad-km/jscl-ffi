@@ -6,7 +6,7 @@
            =\     /=                  if this code is not work, i dont know who wrote this code
              )   (                    Copyright В© 2017,2018,2023  @vlad-km
             /     \                   2017, Original https://github.com/vlad-km/moren-electron
-            )     (                   2023, Code redesign
+            )     (                   2023, Code redesign, added features
            /       \                  Electron >= electron@21.2.2
            \       /                  JSCL Moren edition
       jgs   \__ __/
@@ -24,16 +24,17 @@
                #:element-value
                #:dom-element-p 
                #:get-element-by-id #:get-element-by-class
-               #:has-attribute     #:set-attribute  #:get-attribute #:remove-attribute
+               #:has-attribute     #:set-attribute      #:get-attribute #:remove-attribute
                #:set-event         #:add-event-listener #:rem-event-listener
-               #:node-append-child #:remove-child  #:mount #:umount
-               #:get-class-name    #:get-class-list #:contains-class-p
+               #:node-append-child #:remove-child
+               #:mount             #:umount
+               #:get-class-name    #:get-class-list  #:contains-class-p
                #:add-class-name    #:remove-class-name
                #:toggle-class-name
                #:parent-node       #:node-name
-               #:has-childs        #:child-count  #:get-childs
-               #:first-child       #:last-child #:next-sibling
-               #:insert-before     #:insert-after #:insert-top
+               #:has-childs        #:child-count    #:get-childs
+               #:first-child       #:last-child     #:next-sibling
+               #:insert-before     #:insert-after   #:insert-top
                #:element-width     #:element-height #:page-width #:page-height
                #:visible-width     #:visible-height
                #:create-element
@@ -81,10 +82,6 @@
   (#j:window:document:getElementsByClassName name))
 
 ;;; true if element has attribute 
-#+nil
-(defun has-attribute (elem name)
-  (funcall ((jscl::oget elem "hasAttribute" "bind") elem name)))
-
 (defun has-attribute (elem name)
   ((jscl::oget elem "hasAttribute") name))
 
@@ -109,6 +106,7 @@
 ;;; dataset get/set
 ;;; if dataset.key is absent returned `nil`
 ;;; so, for setting value=nil, use something like this  :true/:false
+(export '(html::element-data))
 (defun element-data (el key &optional (value nil val-p))
   (if val-p
       (setf (jscl::oget el "dataset" key) value)
@@ -122,6 +120,7 @@
 ;;;     "span"
 ;;;     "SPAN"
 ;;;     "SPAN"
+(export '(html:element-tag))
 (defun element-tag (el)
   (values 
    (jscl::oget el "localName")
@@ -133,11 +132,13 @@
 ;;; => nil
 ;;; (html-p (html:span))
 ;;; => t
+(export '(html::html-p))
 (defun html-p (obj)
   (and (jscl::oget obj "tagName")
        (= ((jscl::oget (jscl::lisp-to-js (string obj)) "indexOf") "HTML") 8 )))
 
 ;;; innerHtml getter/setter
+(export '(html::inner-html))
 (defun inner-html (el &optional (value nil val-p))
   (if val-p
       (jscl::oget el "innerHtml")
@@ -145,6 +146,7 @@
 
 ;;; element hidden
 ;;; getter / setter
+(export '(html:element-hidden))
 (defun element-hidden (el &optional (value nil val-p))
   (if val-p
       (setf (jscl::oget el "hidden") value)
