@@ -171,11 +171,8 @@
 ;;;    (funcall (ffi:ref "Array") 1 2 3)
 ;;;    => #(1 2 3)
 (export '(ffi::ref))
-#+nil
 (defmacro ref (var)
       `(jscl::%js-vref ,var))
-(defun ref (name-string)
-      (jscl::%js-vref name-string))
 
 
 ;;; (winref "document")
@@ -183,12 +180,8 @@
 ;;; (winref "screenX")
 ;;;    => nnn
 (export '(ffi::winref))
-#+nil
 (defmacro @winref (var)
   `(jscl::oget (jscl::%js-vref "window") ,var))
-
-(defun winref (name-string)
-  (jscl::oget (jscl::%js-vref "window") name-string))
 
 
 ;;; or (ffi:ref "null")
