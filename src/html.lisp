@@ -68,6 +68,7 @@
         (t (setf (jscl::oget el "value") val))))
 
 ;;; true if element is DOM element
+;;; hmmm... highly likely
 (defun dom-element-p (u)
   (if (jscl::oget u "appendChild")  t nil))
 
@@ -88,10 +89,6 @@
   ((jscl::oget elem "hasAttribute") name))
 
 ;;; set element attribute
-#+nil
-(defun set-attribute (elm attr val)
-  (funcall ((jscl::oget elm "setAttribute" "bind")  elm attr val)))
-
 (defun set-attribute (elm attr val)
   (funcall ((jscl::oget elm "setAttribute" "bind")  elm attr val)))
 
@@ -108,6 +105,50 @@
 ;;; remove attribute
 (defun remove-attribute (elm attr)
   (funcall ((jscl::oget elm "removeAttribute" "bind") elm attr)))
+
+;;; dataset get/set
+;;; if dataset.key is absent returned `nil`
+;;; so, for setting value=nil, use something like this  :true/:false
+(defun element-data (el key &optional (value nil val-p))
+  (if val-p
+      (setf (jscl::oget el "dataset" key) value)
+      (jscl::oget el "dataset" key)))
+
+;;; element TAG
+;;; return localName tagName nodeName
+;;;
+;;; (element-tag (html:span))
+;;; =>
+;;;     "span"
+;;;     "SPAN"
+;;;     "SPAN"
+(defun element-tag (el)
+  (values 
+   (jscl::oget el "localName")
+   (jscl::oget el "tagName")
+   (jscl::oget el "nodeName")))
+
+;;; HTML element predicate
+;;; (html-p (jscl::new))
+;;; => nil
+;;; (html-p (html:span))
+;;; => t
+(defun html-p (obj)
+  (and (jscl::oget obj "tagName")
+       (= ((jscl::oget (jscl::lisp-to-js (string obj)) "indexOf") "HTML") 8 )))
+
+;;; innerHtml getter/setter
+(defun inner-html (el &optional (value nil val-p))
+  (if val-p
+      (jscl::oget el "innerHtml")
+      (setf (jscl::oget el "innerHTML") value)))
+
+;;; element hidden
+;;; getter / setter
+(defun element-hidden (el &optional (value nil val-p))
+  (if val-p
+      (setf (jscl::oget el "hidden") value)
+      (jscl::oget el "hidden")))
 
 ;;; events
 
@@ -158,6 +199,7 @@
           (t ((jscl::oget parent "removeChild")  elem )))))
 
 ;;; mount what where
+;;; unix like style: mount what where
 (defun mount (what where)
   (node-append-child what where))
 
@@ -378,12 +420,27 @@
     (flet ((%do (key value)
              (check-type key (or keyword symbol string))
              (case key
+               ;; set element style
+               ;;   (html:div :style "backrgound-color:red")
+               ;; => <div style="backrgound-color:red"></div>
+               ;; but 
+               ;;   (html:div :|style.background-color| "red")
+               ;; => <div style="background-color: red;"></div>
                ((:style) (%set-style* *el value))
+               ;; append new element to produced element
+               ;; (html:div :append (html::empty-div) :append (html::empty-span) :|id| "xx")
+               ;; => <div id="xx"><div></div><span></span></div>
                ((:append) (node-append-child value *el))
-               ;; (:append-to this another)
-               ;; (:mount what where)
+               ;; append produced element to other element
+               ;; (setq sp (html:span :|id| "span"))
+               ;; (html:div :append-to sp)
+               ;;  => <span id="span"><div></div></span>
                ((:append-to :mount) (node-append-child *el value))
-               ;; make any attribute's 
+               ;; make any attribute's
+               ;; =>
+               ;; (html:div :|id| "xx"
+               ;;           :|style.background-color| "red"
+               ;;:          :|position| "absolute")
                (otherwise (%set-attributes *el key value)))))
       (let ((elid 0)
             (key-val))
@@ -393,8 +450,20 @@
           (incf elid)))
       *el)))
 
+;;; create empty html element with tag
 (defun create-element (tag) (#j:window:document:createElement tag))
 
+;;; declare html element constructor with tag
+;;; after this may to do create and customize elements
+;;; and perform operations on them  
+;;;
+;;; (html:declare-element div)
+;;; (html:declare-element span)
+;;; (setq div
+;;;    (html:div :|id| "first"
+;;;              :append (html:span :|id| "second")
+;;;              :mount (html:get-element-by-id "top")))
+;;;
 (defmacro declare-element (name)
   (let* ((element  (intern (symbol-name `,name) "HTML"))
          (tag (symbol-name `,name))
@@ -419,6 +488,9 @@
 
 
 (in-package :cl-user)
+
+;;; initial set of the html element contructors
+;;; other constructors  are created in the application as needed
 
 (html:declare-element button)
 (html:declare-element div)
