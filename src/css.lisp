@@ -38,8 +38,7 @@
 
 (export '(jscl::js-null-p jscl::concat))
 
-;;; local macro for JSO
-
+;;; local macros (without ffi)
 (defmacro jso_mcall ((obj &rest methods) &body body)
   `(funcall ((jscl::oget ,obj ,@methods "bind") ,obj ,@body)))
 
@@ -51,14 +50,6 @@
 
 (defmacro jso_set ((obj &rest methods) &body body)
   `(setf (jscl::oget ,obj ,@methods) ,@body))
-
-
-;;; css
-;;; options
-;;;{
-;;;    helper: "ui-resizable-helper",
-;;;    grid: [10, 10]
-;;;}
 
 
 ;;;; CSS SheetTables
@@ -124,6 +115,8 @@
 ;;;    (add-css-rule num rule-string) where num is (integer 0 length-CSSSheets))
 ;;;    (add-css-rule CSSSheetObj rule-string)
 ;;;
+
+;;; (css:create-style-sheet (css:le-css "#terminus" :color "red") (:|div > span| :background-color "green"))
 (defun create-style-sheet (rules &optional (idx 0))
   (let* ((elt (jso_mcall (#j:document:head "appendChild")
                          (#j:window:document:createElement "style")))
@@ -163,7 +156,7 @@
 ;;; use "#name" "name::after"
 ;;;
 ;;; for create-style-sheet
-;;;     (le-css .name :color "black")
+;;;     (le-css (.name :color "red") (:|div > span| :color "blue"))
 ;;;     => ".name {color:black}"
 ;;;     or
 ;;;;    (concat (le-css ...) " " (le-css ...) )
@@ -179,43 +172,19 @@
 (defun inline (rule)
   (lessi nil rule))
 
-#+nil
-(defmacro le-css (l-rule &rest r-rule)
-    (let ((rname (cond  ((stringp l-rule) l-rule)
-                        ((symbolp l-rule) `',l-rule))))
-        `(lessi ,rname ',r-rule)))
+;;; (le-css (.name :color "red") (:|div > span| :color "blue"))
+(defmacro le-css (&body rules)
+        `(%le-css ',rules))
 
-(defun le-css (rules)
+(defun %le-css (rules)
   (apply 'jscl::concat
          (loop for rule in rules
-               collect (lessi (car rule) (cdr rule)))))
-
-#+nil
-(defun lessi (left right)
-    (when (oddp (length right)) (error "Lessi: odd length arguments"))
-    (let ((pairs nil))
-        (labels ((store (var val) (push (jscl::concat var val) pairs))
-                 (lower (x) (jso:call ((jscl::lisp-to-js x) "toLowerCase")))
-                 (change-name (key) (lower (jscl::concat (symbol-name key) ":")))
-                 (conv (var val)
-                     (store (change-name var) (jscl::concat val ";"))))
-            (tagbody parser
-             rdr
-               (setq vname (pop right))
-               (unless vname (go done))
-               (setq value (pop right))
-               (conv vname value)
-               (go rdr)
-             done
-               (if left (push "} " pairs)))
-            (setq pairs (reverse pairs))
-            (when left
-                (push " { " pairs)
-                (push (cond ((stringp left) left)
-                            (t (lower (symbol-name left))))
-                      pairs))
-            (apply 'jscl::concat pairs ))))
-
+               collect (lessi (let ((name (car rule)))
+                                (cond ((stringp name) name)
+                                      ((symbolp name) name)
+                                      (t (error "le-css: wtf ~a?" name)))
+                                name)
+                              (cdr rule)))))
 
 (defun lessi (left right)
   (when (oddp (length right)) (error "Lessi: odd length arguments"))
