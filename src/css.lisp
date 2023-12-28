@@ -116,7 +116,8 @@
 ;;;    (add-css-rule CSSSheetObj rule-string)
 ;;;
 
-;;; (css:create-style-sheet (css:le-css "#terminus" :color "red") (:|div > span| :background-color "green"))
+;;; (css:create-style-sheet (css:le-css "#terminus" :color "red")
+;;                          (:|div > span| :background-color "green"))
 (defun create-style-sheet (rules &optional (idx 0))
   (let* ((elt (jso_mcall (#j:document:head "appendChild")
                          (#j:window:document:createElement "style")))
@@ -166,6 +167,20 @@
 ;;;     => "color:black;background-color:red;"
 ;;;
 
+
+;;; css measurement units functions 
+(defun %px (&rest n)
+  (when (> (list-length n) 4)
+    (error "Wrong %px argument ~n." n))
+  (apply 'jscl::concat (jscl::%lmapcar (lambda (x) (jscl::concat  x "px ")) n)))
+
+(defun %em (&rest n)
+  (when (> (list-length n) 4)
+    (error "Wrong %em argument ~n." n))
+  (apply 'jscl::concat (jscl::%lmapcar (lambda (x) (jscl::concat  x "em ")) n)))
+
+(defun %% (n) (jscl::concat n "%"))
+
 ;;; (css:inline `(:color "black" :background-color "red"))
 ;;; (defvar *e '(:background-color |Yellow| :color #x666))
 ;;; (css-inline `(:font-weight normal ,@*e))
@@ -211,6 +226,9 @@
                     (t (lower (symbol-name left))))
               pairs))
       (apply 'jscl::concat pairs ))))
+
+
+(push :css *features*)
 
 (in-package :cl-user)
 
