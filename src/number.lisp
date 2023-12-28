@@ -118,6 +118,7 @@
 (defun to-string (number &optional (radix 10))
   (ffi:call ((ffi:cl->js number) "toString") radix))
 
+(push :number *features*)
 
 (in-package :cl-user)
 ;;; EOF
