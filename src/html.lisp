@@ -489,6 +489,8 @@
   (#j:window:document:createElement "pre"))
 
 
+(push :html *features*)
+
 (in-package :cl-user)
 
 ;;; initial set of the html element contructors
