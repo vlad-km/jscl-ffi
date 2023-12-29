@@ -22,8 +22,8 @@
     (defpackage :number
       (:use :cl)
       (:export #:parse-int         #:parse-float
-               #:number->fixed     #:string->number
-               #:number->Exponential 
+               #:to-fixed          #:from-string
+               #:to-Exponential 
                #:to-precision       #:to-string))))
 
 (in-package :number) 
@@ -62,8 +62,13 @@
 ;;;     => "123.12"
 ;;;     (number->fixed 123.123456 4)
 ;;;     => "123.1235"
+#+nil
 (defun number->fixed (number &optional (fixnum (ffi:js-null)))
   (ffi:bind-call ((ffi:cl->js number) "toFixed") fixnum))
+
+(defun to-fixed (number &optional (fixnum (ffi:js-null)))
+  (ffi:bind-call (number "toFixed") fixnum))
+
 
 ;;; returns primitive values of type Number
 ;;; Ex:
@@ -91,7 +96,7 @@
 ;;;     => 1234.0000000001
 ;;;   (type-of *)
 ;;;     => FLOAT
-(defun string->number (string)
+(defun from-string (string)
   (#j:Number string))
 
 ;;; returns a string representing this number in exponential notation
@@ -104,19 +109,33 @@
 ;;;     => "1.2346e+5"
 ;;;   (number->exponential 123456 1)
 ;;;     => "1.2e+5"
+#+nil
 (defun number->Exponential (number &optional (fraction (ffi:js-null)))
   (ffi:call ((ffi:cl->js number) "toExponential") fraction))
+
+(defun to-Exponential (number &optional (fraction (ffi:js-null)))
+  (ffi:call (number "toExponential") fraction))
+
 
 ;;;  returns a string representing this number to the specified precision
 ;;;   If the precision argument is a non-integer value, it is rounded to the nearest integer
 ;;;  Ex:
 ;;;
+#+nil
 (defun to-precision (number &optional (precision 1))
   (ffi:call ((ffi:cl->js number) "toPrecision") precision))
 
+(defun to-precision (number &optional (precision 1))
+  (ffi:call (number "toPrecision") precision))
+
+
 ;;; returns a string representing this number value by radix
+#+nil
 (defun to-string (number &optional (radix 10))
   (ffi:call ((ffi:cl->js number) "toString") radix))
+
+(defun to-string (number &optional (radix 10))
+  (ffi:call (number "toString") radix))
 
 (push :number *features*)
 
