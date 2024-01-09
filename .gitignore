@@ -3,4 +3,5 @@
 *.js
 t/
 bin/
+src/bench-api.*
 
