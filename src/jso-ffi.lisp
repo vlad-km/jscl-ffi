@@ -342,6 +342,11 @@
 ;;; (%nc :|a-b|) => "aB"
 ;;; (%nc :|a -b| => "a_B")
 ;;; string:= (%nc "AbC" => "AbC")
+;;; note: about legal name form
+;;;       :|@name of subject| -> js:'@name_of_subject'
+;;;                              so, (ffi:getprop obj :|@name of subject|) => value-of
+;;;                              but js: rds['@name_of_subject'], not rds.@name_of_subject
+;;;
 (defun %nc (name)
   (cond ((stringp name) (return-from %nc name))
         ((symbolp name) (setq name (string-downcase (symbol-name name))))
@@ -644,6 +649,9 @@
 
 
 #|
+                   Deprecated, see commentary abowe. For more complex cases, use native JS
+
+
 ;;; (:constructor (arg arg arg) &body)
 (defun %do-constructor-clause (tail)
     `(lambda (,@(car tail)) ,@(cdr tail)))
@@ -712,6 +720,7 @@
 |#
 
 #|
+
 (export '(ffi::defobject))
 (defmacro defobject ((name &key inherit) &rest clauses)
     (let ((parent)
