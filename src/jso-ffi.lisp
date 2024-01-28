@@ -426,6 +426,7 @@
 ;;; "bbb"
 ;;; nil
 (export '(ffi::for-each))
+;;; todo: note: deprecate
 (defun for-each (jso fn)
   ;; fn => (lambda (key val) ...)
   (jscl::%lmapcar
@@ -433,6 +434,12 @@
    (jscl::%lmapcar #'jscl::js-to-lisp
                    (jscl::vector-to-list (#j:Object:keys jso)))))
 
+;;; todo: add observer / observer funcall
+(defun for (jso)
+  ((jscl::oget (#j:Object:keys jso) "forEach")
+   (lambda (key &rest ignore) (print (list key (jscl::oget jso key))))))
+
+;;; todo: note: deprecate
 (export '(ffi::mapobj))
 (defun mapobj (object observer)
   ;; observer => (lambda (key val) ...)
