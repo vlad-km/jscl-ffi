@@ -230,6 +230,19 @@
 ;;;   (ffi:getprop s "2") => "c"
 ;;;   (ffi:setprop (s "stringp") nil)
 ;;;   s => #(#\a #\b #\c #\d)
+
+#|
+
+(setq re-trim (#j:RegExp "^\\s+|\\s+$" "g"))
+(setq re-trim-start (#j:RegExp "^\\s+"))
+(setq re-trim-end (#j:RegExp "\\s+$"))
+
+(ffi:|String| ss "replace" re-trim "")
+(ffi:|String| ss "replace" re-trim-start "")
+(ffi:|String| ss "replace" re-trim-end "")
+
+|#
+
 (export '(ffi::|String|))
 (defmacro |String| (s  m  &body a)
   ;; `s` must be a `string`
@@ -771,6 +784,8 @@
              ,@(jscl::%lmapcar (lambda (it) (%set-props `,owns `,it)) `,props) )))
 
 |#
+
+;;; todo: note: (#j:JSON:stringify * (ffi:ref "null")  2)
 
 (push :ffi *features*)
 (in-package :cl-user)
